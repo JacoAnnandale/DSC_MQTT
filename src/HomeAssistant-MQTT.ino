@@ -1,6 +1,6 @@
 
 
-#include <FS.h>   
+#include <FS.h>  // must change to littleFS  
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
