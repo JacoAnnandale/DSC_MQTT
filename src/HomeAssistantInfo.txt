@@ -1,0 +1,143 @@
+/*
+ *  HomeAssistant-MQTT 1.1 (esp8266)
+ *
+ *  Processes the security system status and allows for control using Home Assistant via MQTT.
+ *
+ *  Home Assistant: https://www.home-assistant.io
+ *  Mosquitto MQTT broker: https://mosquitto.org
+ *
+ *  Usage:
+ *    1. Set the WiFi SSID and password in the sketch.
+ *    2. Set the security system access code to permit disarming through Home Assistant.
+ *    3. Set the MQTT server address in the sketch.
+ *    4. Copy the example configuration to Home Assistant's configuration.yaml and customize.
+ *    5. Upload the sketch.
+ *    6. Restart Home Assistant.
+ *
+ *  Example Home Assistant configuration.yaml:
+
+# https://www.home-assistant.io/components/mqtt/
+mqtt:
+  broker: URL or IP address
+  client_id: homeAssistant
+
+# https://www.home-assistant.io/components/alarm_control_panel.mqtt/
+alarm_control_panel:
+  - platform: mqtt
+    name: "Security System Partition 1"
+    state_topic: "dsc/Get/Partition1"
+    availability_topic: "dsc/Status"
+    command_topic: "dsc/Set"
+    payload_disarm: "1D"
+    payload_arm_home: "1S"
+    payload_arm_away: "1A"
+  - platform: mqtt
+    name: "Security System Partition 2"
+    state_topic: "dsc/Get/Partition2"
+    availability_topic: "dsc/Status"
+    command_topic: "dsc/Set"
+    payload_disarm: "2D"
+    payload_arm_home: "2S"
+    payload_arm_away: "2A"
+
+# https://www.home-assistant.io/components/binary_sensor/
+binary_sensor:
+  - platform: mqtt
+    name: "Security Trouble"
+    state_topic: "dsc/Get/Trouble"
+    device_class: "problem"
+    payload_on: "1"
+    payload_off: "0"
+  - platform: mqtt
+    name: "Smoke Alarm 1"
+    state_topic: "dsc/Get/Fire1"
+    device_class: "smoke"
+    payload_on: "1"
+    payload_off: "0"
+  - platform: mqtt
+    name: "Smoke Alarm 2"
+    state_topic: "dsc/Get/Fire2"
+    device_class: "smoke"
+    payload_on: "1"
+    payload_off: "0"
+  - platform: mqtt
+    name: "Zone 1"
+    state_topic: "dsc/Get/Zone1"
+    device_class: "door"
+    payload_on: "1"
+    payload_off: "0"
+  - platform: mqtt
+    name: "Zone 2"
+    state_topic: "dsc/Get/Zone2"
+    device_class: "window"
+    payload_on: "1"
+    payload_off: "0"
+  - platform: mqtt
+    name: "Zone 3"
+    state_topic: "dsc/Get/Zone3"
+    device_class: "motion"
+    payload_on: "1"
+    payload_off: "0"
+
+ *  The commands to set the alarm state are setup in Home Assistant with the partition number (1-8) as a prefix to the command:
+ *    Partition 1 disarm: "1D"
+ *    Partition 2 arm stay: "2S"
+ *    Partition 2 arm away: "2A"
+ *
+ *  The interface listens for commands in the configured mqttSubscribeTopic, and publishes partition status in a
+ *  separate topic per partition with the configured mqttPartitionTopic appended with the partition number:
+ *    Disarmed: "disarmed"
+ *    Arm stay: "armed_home"
+ *    Arm away: "armed_away"
+ *    Exit delay in progress: "pending"
+ *    Alarm tripped: "triggered"
+ *
+ *  The trouble state is published as an integer in the configured mqttTroubleTopic:
+ *    Trouble: "1"
+ *    Trouble restored: "0"
+ *
+ *  Zone states are published as an integer in a separate topic per zone with the configured mqttZoneTopic appended
+ *  with the zone number:
+ *    Open: "1"
+ *    Closed: "0"
+ *
+ *  Fire states are published as an integer in a separate topic per partition with the configured mqttFireTopic
+ *  appended with the partition number:
+ *    Fire alarm: "1"
+ *    Fire alarm restored: "0"
+ *
+ *  Release notes:
+ *    1.1 - Merged: availability status
+ *          Updated: availability status based on Keybus connection status
+ *    1.0 - Initial release
+ *
+ *  Wiring:
+ *      DSC Aux(+) ---+--- esp8266 NodeMCU Vin pin
+ *                    |
+ *                    +--- 5v voltage regulator --- esp8266 Wemos D1 Mini 5v pin
+ *
+ *      DSC Aux(-) --- esp8266 Ground
+ *
+ *                                         +--- dscClockPin (esp8266: D1, D2, D8)
+ *      DSC Yellow --- 15k ohm resistor ---|
+ *                                         +--- 10k ohm resistor --- Ground
+ *
+ *                                         +--- dscReadPin (esp8266: D1, D2, D8)
+ *      DSC Green ---- 15k ohm resistor ---|
+ *                                         +--- 10k ohm resistor --- Ground
+ *
+ *  Virtual keypad (optional):
+ *      DSC Green ---- NPN collector --\
+ *                                      |-- NPN base --- 1k ohm resistor --- dscWritePin (esp8266: D1, D2, D8)
+ *            Ground --- NPN emitter --/
+ *
+ *  Virtual keypad uses an NPN transistor to pull the data line low - most small signal NPN transistors should
+ *  be suitable, for example:
+ *   -- 2N3904
+ *   -- BC547, BC548, BC549
+ *
+ *  Issues and (especially) pull requests are welcome:
+ *  https://github.com/taligentx/dscKeybusInterface
+ *
+ *  This example code is in the public domain.
+ */
