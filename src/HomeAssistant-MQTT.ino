@@ -530,7 +530,7 @@ void mqttReconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqtt.state());
-      Serial.println(" try again in 5 seconds");
+      Serial.println(" try again in 5 seconds"); 
       Serial.println(mqtt_server);
       Serial.println(mqtt_port);
       Serial.println(mqtt_Username);
